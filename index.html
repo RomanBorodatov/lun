@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lun NY Truck</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.1/mapbox-gl.js"></script>
+    <script
+      src="https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v2.0.0/turf.min.js"
+      charset="utf-8"
+    ></script>
+    <link
+      href="https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      #carImage {
+        width: 50px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <img src="car2.svg" alt="car" id="carImage" />
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1Ijoicm9tYW5ib3JvZGF0b3YiLCJhIjoiY2sxa2w3N3Y1MDdvZjNibzNveXFidWpuaSJ9.h9858JVC3HbU02hxED68eg";
+      const map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/navigation-guidance-night-v4",
+        center: [30.4711555, 50.386974],
+        zoom: 13
+      });
+
+      const origin = [30.4711555, 50.386974];
+      const destination = [30.480598, 50.37886];
+      const carImage = document.getElementById("carImage");
+      let marker;
+
+      function getRoute() {
+        const url =
+          "https://api.mapbox.com/directions/v5/mapbox/driving/" +
+          origin[0] +
+          "," +
+          origin[1] +
+          ";" +
+          destination[0] +
+          "," +
+          destination[1] +
+          "?steps=true&geometries=geojson&access_token=" +
+          mapboxgl.accessToken;
+
+        fetch(url)
+          .then(res => res.json())
+          .then(res => {
+            const data = res.routes[0];
+            const route = data.geometry.coordinates;
+            const steps = data.legs[0].steps;
+            const geojson = {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates: route
+              }
+            };
+            marker = new mapboxgl.Marker(carImage)
+              .setLngLat(route[0])
+              .addTo(map);
+            // if the route already exists on the map, reset it using setData
+            if (map.getSource("route")) {
+              map.getSource("route").setData(geojson);
+            } else {
+              // otherwise, make a new request
+              map.addLayer({
+                id: "route",
+                type: "line",
+                source: {
+                  type: "geojson",
+                  data: geojson
+                },
+                layout: {
+                  "line-join": "round",
+                  "line-cap": "round"
+                },
+                paint: {
+                  "line-color": "blue",
+                  "line-width": 3,
+                  "line-opacity": 0.5
+                }
+              });
+            }
+          });
+      }
+
+      map.on("load", function() {
+        getRoute();
+        map.addLayer({
+          id: "origin",
+          type: "circle",
+          source: {
+            type: "geojson",
+            data: {
+              type: "FeatureCollection",
+              features: [
+                {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                    type: "Point",
+                    coordinates: origin
+                  }
+                }
+              ]
+            }
+          },
+          paint: {
+            "circle-radius": 10,
+            "circle-color": "#3887be"
+          }
+        });
+
+        map.addLayer({
+          id: "destination",
+          type: "circle",
+          source: {
+            type: "geojson",
+            data: {
+              type: "FeatureCollection",
+              features: [
+                {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                    type: "Point",
+                    coordinates: destination
+                  }
+                }
+              ]
+            }
+          },
+          paint: {
+            "circle-radius": 10,
+            "circle-color": "#3887be"
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
