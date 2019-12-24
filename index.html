@@ -44,13 +44,81 @@
         container: "map",
         style: "mapbox://styles/mapbox/navigation-guidance-night-v4",
         center: [30.4711555, 50.386974],
-        zoom: 13
+        zoom: 14
       });
 
       const origin = [30.4711555, 50.386974];
       const destination = [30.480598, 50.37886];
       const carImage = document.getElementById("carImage");
       let marker;
+      let route;
+
+      const animateRouteChunk = index => {
+        return new Promise(resolve => {
+          let routeChunk = {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: [route[index], route[index + 1]]
+                }
+              }
+            ]
+          };
+          const distance = turf.lineDistance(
+            routeChunk.features[0],
+            "kilometers"
+          );
+
+          const currentMarkerAngle = marker.getRotation();
+          const currentMarkerPosition = marker.getLngLat();
+
+          const toRotate = turf.bearing(
+            turf.point([currentMarkerPosition.lng, currentMarkerPosition.lat]),
+            turf.point(routeChunk.features[0].geometry.coordinates[1])
+          );
+
+          const detailedPath = [];
+
+          const steps = distance / 0.005;
+
+          for (i = 0; i < distance; i += distance / steps) {
+            const segment = turf.along(routeChunk.features[0], i, "kilometers");
+            detailedPath.push(segment.geometry.coordinates);
+          }
+
+          let counter = 0;
+          let rotated = false;
+
+          const animate = () => {
+            if (!rotated) {
+              marker.setRotation(toRotate);
+            }
+            if (detailedPath[counter]) {
+              marker.setLngLat(detailedPath[counter]);
+            }
+
+            if (counter < steps) {
+              requestAnimationFrame(animate);
+            } else {
+              resolve();
+            }
+
+            counter = counter + 1;
+          };
+
+          animate();
+        });
+      };
+
+      const animateCarAlongAllRoute = async () => {
+        const chunks = route.length;
+        for (let i = 0; i < chunks; i++) {
+          await animateRouteChunk(i);
+        }
+      };
 
       function getRoute() {
         const url =
@@ -69,7 +137,7 @@
           .then(res => res.json())
           .then(res => {
             const data = res.routes[0];
-            const route = data.geometry.coordinates;
+            route = data.geometry.coordinates;
             const steps = data.legs[0].steps;
             const geojson = {
               type: "Feature",
@@ -105,6 +173,7 @@
                 }
               });
             }
+            animateCarAlongAllRoute();
           });
       }
 
