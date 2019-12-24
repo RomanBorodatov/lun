@@ -115,7 +115,7 @@
 
       const animateCarAlongAllRoute = async () => {
         const chunks = route.length;
-        for (let i = 0; i < chunks; i++) {
+        for (let i = 0; i < chunks - 1; i++) {
           await animateRouteChunk(i);
         }
       };
