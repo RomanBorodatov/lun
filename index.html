@@ -36,7 +36,11 @@
   </head>
   <body>
     <div id="map"></div>
-    <img src="car2.svg" alt="car" id="carImage" />
+    <img src="./car2.svg" alt="car" id="carImage" />
+    <audio controls autoplay loop src="./music2.mp3">
+      Your browser does not support the
+      <code>audio</code> element.
+    </audio>
     <script>
       mapboxgl.accessToken =
         "pk.eyJ1Ijoicm9tYW5ib3JvZGF0b3YiLCJhIjoiY2sxa2w3N3Y1MDdvZjNibzNveXFidWpuaSJ9.h9858JVC3HbU02hxED68eg";
@@ -52,6 +56,7 @@
       const carImage = document.getElementById("carImage");
       let marker;
       let route;
+      let smoothRoute;
 
       const animateRouteChunk = index => {
         return new Promise(resolve => {
@@ -62,7 +67,7 @@
                 type: "Feature",
                 geometry: {
                   type: "LineString",
-                  coordinates: [route[index], route[index + 1]]
+                  coordinates: [smoothRoute[index], smoothRoute[index + 1]]
                 }
               }
             ]
@@ -72,49 +77,111 @@
             "kilometers"
           );
 
+          const duration = Math.round((distance * 1000) / 0.0139 / 10);
+
           const currentMarkerAngle = marker.getRotation();
           const currentMarkerPosition = marker.getLngLat();
 
-          const toRotate = turf.bearing(
+          const ease = ({ distance, durationMs, onStep }) => {
+            const raf =
+              window.requestAnimationFrame ||
+              (func => window.setTimeout(func, 16));
+
+            const stepCount = durationMs / 16 > 120 ? durationMs / 16 : 120;
+            const valueIncrement = distance / stepCount;
+            const sinValueIncrement = Math.PI / stepCount;
+
+            let currentValue = 0;
+            let currentSinValue = 0;
+
+            function step() {
+              currentSinValue += sinValueIncrement;
+              currentValue +=
+                valueIncrement * Math.sin(currentSinValue) ** 2 * 2;
+
+              if (currentSinValue < Math.PI) {
+                onStep(currentValue);
+                raf(step);
+              } else {
+                resolve();
+              }
+            }
+
+            raf(step);
+          };
+
+          let rotated = 0;
+
+          const targetAngle = turf.bearing(
             turf.point([currentMarkerPosition.lng, currentMarkerPosition.lat]),
             turf.point(routeChunk.features[0].geometry.coordinates[1])
           );
 
-          const detailedPath = [];
+          const currentAngle = marker.getRotation();
 
-          const steps = distance / 0.005;
+          const delta = ((targetAngle - currentAngle + 540) % 360) - 180;
 
-          for (i = 0; i < distance; i += distance / steps) {
-            const segment = turf.along(routeChunk.features[0], i, "kilometers");
-            detailedPath.push(segment.geometry.coordinates);
-          }
+          const moveMarker = distance => {
+            const newPosition = turf.along(
+              routeChunk.features[0],
+              distance,
+              "kilometers"
+            ).geometry.coordinates;
 
-          let counter = 0;
-          let rotated = false;
+            marker.setLngLat(newPosition);
 
-          const animate = () => {
-            if (!rotated) {
-              marker.setRotation(toRotate);
+            if (rotated <= 20) {
+              marker.setRotation(currentAngle + delta * 0.05 * rotated);
+              rotated += 1;
             }
-            if (detailedPath[counter]) {
-              marker.setLngLat(detailedPath[counter]);
-            }
-
-            if (counter < steps) {
-              requestAnimationFrame(animate);
-            } else {
-              resolve();
-            }
-
-            counter = counter + 1;
           };
 
-          animate();
+          ease({
+            distance: distance,
+            durationMs: duration,
+            onStep: moveMarker
+          });
+
+          // const toRotate = turf.bearing(
+          //   turf.point([currentMarkerPosition.lng, currentMarkerPosition.lat]),
+          //   turf.point(routeChunk.features[0].geometry.coordinates[1])
+          // );
+
+          // const detailedPath = [];
+
+          // const steps = distance / 0.005;
+
+          // for (i = 0; i < distance; i += distance / steps) {
+          //   const segment = turf.along(routeChunk.features[0], i, "kilometers");
+          //   detailedPath.push(segment.geometry.coordinates);
+          // }
+
+          // let counter = 0;
+          // let rotated = false;
+
+          // const animate = () => {
+          //   if (!rotated) {
+          //     marker.setRotation(toRotate);
+          //   }
+          //   if (detailedPath[counter]) {
+          //     marker.setLngLat(detailedPath[counter]);
+          //   }
+
+          //   if (counter < steps) {
+          //     requestAnimationFrame(animate);
+          //   } else {
+          //     resolve();
+          //   }
+
+          //   counter = counter + 1;
+          // };
+
+          // animate();
         });
       };
 
       const animateCarAlongAllRoute = async () => {
-        const chunks = route.length;
+        const chunks = smoothRoute.length;
         for (let i = 0; i < chunks - 1; i++) {
           await animateRouteChunk(i);
         }
@@ -138,6 +205,36 @@
           .then(res => {
             const data = res.routes[0];
             route = data.geometry.coordinates;
+            console.log(route);
+            smoothRoute = [route[0]];
+            for (let i = 0; i < route.length; i++) {
+              if (i === route.length - 3) {
+                console.log(i);
+                smoothRoute.push(route[i + 1]);
+                smoothRoute.push(route[i + 2]);
+                break;
+              } else {
+                const firstAngle = turf.bearing(
+                  turf.point(route[i]),
+                  turf.point(route[i + 1])
+                );
+                const secondAngle = turf.bearing(
+                  turf.point(route[i + 1]),
+                  turf.point(route[i + 2])
+                );
+
+                const delta = ((secondAngle - firstAngle + 540) % 360) - 180;
+
+                if (delta > -10 && delta < 10) {
+                  smoothRoute.push(route[i + 2]);
+                  i = i + 1;
+                } else {
+                  smoothRoute.push(route[i + 1]);
+                }
+              }
+            }
+            console.log(smoothRoute);
+
             const steps = data.legs[0].steps;
             const geojson = {
               type: "Feature",
@@ -168,7 +265,7 @@
                 },
                 paint: {
                   "line-color": "blue",
-                  "line-width": 3,
+                  "line-width": 5,
                   "line-opacity": 0.5
                 }
               });
