@@ -33,6 +33,10 @@
         width: 50px;
       }
 
+      #rocketImage {
+        width: 50px;
+      }
+
       .controls-container {
         position: absolute;
         top: 10px;
@@ -56,6 +60,7 @@
   <body>
     <div id="map"></div>
     <img src="./car2.svg" alt="car" id="carImage" />
+    <img src="./rocket.svg" alt="rocket" id="rocketImage" />
     <div class="controls-container">
       <audio controls loop src="./music2.mp3" id="audio">
         Your browser does not support the
@@ -69,13 +74,14 @@
       const map = new mapboxgl.Map({
         container: "map",
         style: "mapbox://styles/mapbox/navigation-guidance-night-v4",
-        center: [30.4711555, 50.386974],
+        center: [30.472878, 50.384119],
         zoom: 14
       });
 
       const origin = [30.4711555, 50.386974];
       const destination = [30.480598, 50.37886];
       const carImage = document.getElementById("carImage");
+      const rocketImage = document.getElementById("rocketImage");
       let marker;
       let route;
       let smoothRoute;
@@ -125,7 +131,7 @@
             raf(step);
           };
 
-          let rotated = 0;
+          let initialyRotated = 0;
 
           const targetAngle = turf.bearing(
             turf.point([currentMarkerPosition.lng, currentMarkerPosition.lat]),
@@ -145,9 +151,9 @@
 
             marker.setLngLat(newPosition);
 
-            if (rotated <= 20) {
-              marker.setRotation(currentAngle + delta * 0.05 * rotated);
-              rotated += 1;
+            if (initialyRotated <= 20) {
+              marker.setRotation(currentAngle + delta * 0.05 * initialyRotated);
+              initialyRotated += 1;
             }
           };
 
@@ -173,6 +179,13 @@
               }
             ]
           };
+
+          const savedPosition = marker.getLngLat();
+
+          marker.remove();
+          marker = new mapboxgl.Marker(rocketImage)
+            .setLngLat(savedPosition)
+            .addTo(map);
 
           const from = turf.point(destination);
           const to = turf.point(origin);
