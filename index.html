@@ -79,23 +79,14 @@
       let marker;
       let route;
       let smoothRoute;
+      let routeInChunks;
       const runButton = document.getElementById("run-button");
       const audioTrack = document.getElementById("audio");
 
-      const animateRouteChunk = index => {
+      const animateRouteChunk = chunk => {
+        console.log(chunk);
         return new Promise(resolve => {
-          let routeChunk = {
-            type: "FeatureCollection",
-            features: [
-              {
-                type: "Feature",
-                geometry: {
-                  type: "LineString",
-                  coordinates: [smoothRoute[index], smoothRoute[index + 1]]
-                }
-              }
-            ]
-          };
+          let routeChunk = chunk;
           const distance = turf.lineDistance(
             routeChunk.features[0],
             "kilometers"
@@ -232,9 +223,10 @@
       };
 
       const animateCarAlongAllRoute = async () => {
-        const chunks = smoothRoute.length;
-        for (let i = 0; i < chunks - 1; i++) {
-          await animateRouteChunk(i);
+        console.log(routeInChunks);
+        const length = routeInChunks.length;
+        for (let i = 0; i < length; i++) {
+          await animateRouteChunk(routeInChunks[i]);
         }
         setTimeout(async () => {
           await animateWayBack();
@@ -259,6 +251,42 @@
         };
       };
 
+      const breakRouteInChunksWithAngle = route => {
+        const chunks = [];
+
+        for (let i = 0; i < route.length; i++) {
+          const chunkCoords = [route[i]];
+          if (i === route.length - 2) {
+            console.log("here", i, route);
+            chunkCoords.push(route[route.length - 1]);
+            chunks.push(generateChunk(chunkCoords));
+            break;
+          }
+          for (let n = i; n < route.length - 2; n++) {
+            const firstAngle = turf.bearing(
+              turf.point(route[n]),
+              turf.point(route[n + 1])
+            );
+            const secondAngle = turf.bearing(
+              turf.point(route[n + 1]),
+              turf.point(route[n + 2])
+            );
+
+            const delta = ((secondAngle - firstAngle + 540) % 360) - 180;
+
+            if (delta > -10 && delta < 10) {
+              chunkCoords.push(route[n + 1]);
+            } else {
+              chunkCoords.push(route[n + 1]);
+              i = n;
+              break;
+            }
+          }
+          chunks.push(generateChunk(chunkCoords));
+        }
+        return chunks;
+      };
+
       function getRoute() {
         const url =
           "https://api.mapbox.com/directions/v5/mapbox/driving/" +
@@ -278,6 +306,7 @@
             const data = res.routes[0];
             route = data.geometry.coordinates;
             smoothRoute = [route[0]];
+            routeInChunks = breakRouteInChunksWithAngle(route);
             for (let i = 0; i < route.length; i++) {
               if (i === route.length - 3) {
                 smoothRoute.push(route[i + 1]);
