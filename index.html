@@ -244,6 +244,21 @@
         }, 10000);
       };
 
+      const generateChunk = coordinates => {
+        return {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: coordinates
+              }
+            }
+          ]
+        };
+      };
+
       function getRoute() {
         const url =
           "https://api.mapbox.com/directions/v5/mapbox/driving/" +
