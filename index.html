@@ -32,15 +32,37 @@
       #carImage {
         width: 50px;
       }
+
+      .controls-container {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        display: flex;
+        align-items: center;
+      }
+
+      #run-button {
+        height: 50px;
+        width: 100px;
+        background-color: #ff9800;
+        border: none;
+        border-radius: 25px;
+        margin-left: 15px;
+
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
     <div id="map"></div>
     <img src="./car2.svg" alt="car" id="carImage" />
-    <audio controls autoplay loop src="./music2.mp3">
-      Your browser does not support the
-      <code>audio</code> element.
-    </audio>
+    <div class="controls-container">
+      <audio controls loop src="./music2.mp3" id="audio">
+        Your browser does not support the
+        <code>audio</code> element.
+      </audio>
+      <button disabled id="run-button">Run Animation</button>
+    </div>
     <script>
       mapboxgl.accessToken =
         "pk.eyJ1Ijoicm9tYW5ib3JvZGF0b3YiLCJhIjoiY2sxa2w3N3Y1MDdvZjNibzNveXFidWpuaSJ9.h9858JVC3HbU02hxED68eg";
@@ -57,6 +79,8 @@
       let marker;
       let route;
       let smoothRoute;
+      const runButton = document.getElementById("run-button");
+      const audioTrack = document.getElementById("audio");
 
       const animateRouteChunk = index => {
         return new Promise(resolve => {
@@ -180,11 +204,80 @@
         });
       };
 
+      const animateWayBack = () => {
+        return new Promise(resolve => {
+          const roadBack = {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: [destination, origin]
+                }
+              }
+            ]
+          };
+
+          const from = turf.point(destination);
+          const to = turf.point(origin);
+
+          var distance = turf.lineDistance(roadBack.features[0], "kilometers");
+
+          const steps = 250;
+
+          const arc = [];
+
+          for (let i = 0; i < distance; i += distance / steps) {
+            const segment = turf.along(roadBack.features[0], i, "kilometers");
+            arc.push(segment.geometry.coordinates);
+          }
+
+          roadBack.features[0].geometry.coordinates = arc;
+
+          let counter = 0;
+
+          animate = () => {
+            const currentMarkerPosition = marker.getLngLat();
+
+            if (roadBack.features[0].geometry.coordinates[counter]) {
+              const targetAngle = turf.bearing(
+                turf.point([
+                  currentMarkerPosition.lng,
+                  currentMarkerPosition.lat
+                ]),
+                turf.point(roadBack.features[0].geometry.coordinates[counter])
+              );
+              marker.setLngLat(
+                roadBack.features[0].geometry.coordinates[counter]
+              );
+              marker.setRotation(targetAngle);
+            }
+
+            // Request the next frame of animation so long the end has not been reached.
+            if (counter < steps) {
+              requestAnimationFrame(animate);
+            } else {
+              resolve();
+            }
+
+            counter = counter + 1;
+          };
+          animate();
+        });
+      };
+
       const animateCarAlongAllRoute = async () => {
         const chunks = smoothRoute.length;
         for (let i = 0; i < chunks - 1; i++) {
           await animateRouteChunk(i);
         }
+        setTimeout(async () => {
+          await animateWayBack();
+          runButton.disabled = false;
+          audioTrack.pause();
+          audioTrack.currentTime = 0;
+        }, 10000);
       };
 
       function getRoute() {
@@ -233,9 +326,6 @@
                 }
               }
             }
-            console.log(smoothRoute);
-
-            const steps = data.legs[0].steps;
             const geojson = {
               type: "Feature",
               properties: {},
@@ -270,7 +360,7 @@
                 }
               });
             }
-            animateCarAlongAllRoute();
+            runButton.disabled = false;
           });
       }
 
@@ -324,6 +414,17 @@
             "circle-radius": 10,
             "circle-color": "#3887be"
           }
+        });
+
+        runButton.addEventListener("click", () => {
+          // Set the coordinates of the original point back to origin
+          marker.setLngLat(origin);
+
+          // play audio
+          audioTrack.play();
+          runButton.disabled = true;
+
+          animateCarAlongAllRoute();
         });
       });
     </script>
