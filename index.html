@@ -150,17 +150,25 @@
           const delta = ((targetAngle - currentAngle + 540) % 360) - 180;
 
           const moveMarker = distance => {
+            const oldPosition = marker.getLngLat();
             const newPosition = turf.along(
               routeChunk.features[0],
               distance,
               "kilometers"
             ).geometry.coordinates;
 
+            const angleToRotate = turf.bearing(
+              turf.point([oldPosition.lng, oldPosition.lat]),
+              turf.point(newPosition)
+            );
+
             marker.setLngLat(newPosition);
 
             if (initialyRotated <= 20) {
               marker.setRotation(currentAngle + delta * 0.05 * initialyRotated);
               initialyRotated += 1;
+            } else {
+              marker.setRotation(angleToRotate);
             }
           };
 
