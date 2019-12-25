@@ -98,7 +98,6 @@
       const audioTrack = document.getElementById("audio");
 
       const animateRouteChunk = chunk => {
-        console.log(chunk);
         return new Promise(resolve => {
           let routeChunk = chunk;
           const distance = turf.lineDistance(
@@ -231,7 +230,6 @@
               marker.setRotation(targetAngle);
             }
 
-            // Request the next frame of animation so long the end has not been reached.
             if (counter < steps) {
               requestAnimationFrame(animate);
             } else {
@@ -250,7 +248,6 @@
             let start = performance.now();
 
             requestAnimationFrame(function animate(time) {
-              // timeFraction изменяется от 0 до 1
               let timeFraction = (time - start) / duration;
               if (timeFraction > 1) timeFraction = 1;
               if (timeFraction < 0) timeFraction = 0;
@@ -262,8 +259,8 @@
               }
             });
           };
-          const duration = 10000;
-          const rounds = 50;
+          const duration = 5000;
+          const rounds = 25;
           let transformed = false;
           let currentRotation = marker.getRotation();
           const targetRotation = turf.bearing(
@@ -272,7 +269,6 @@
           );
           const rotationStep =
             ((currentRotation - targetRotation - 360 * rounds) / duration) * 16;
-          console.log(rotationStep);
           const rotate = progress => {
             currentRotation = currentRotation + rotationStep;
             marker.setRotation(currentRotation);
@@ -295,7 +291,6 @@
       };
 
       const animateCarAlongAllRoute = async () => {
-        console.log(routeInChunks);
         const length = routeInChunks.length;
         for (let i = 0; i < length; i++) {
           await animateRouteChunk(routeInChunks[i]);
@@ -330,7 +325,6 @@
         for (let i = 0; i < route.length; i++) {
           const chunkCoords = [route[i]];
           if (i === route.length - 2) {
-            console.log("here", i, route);
             chunkCoords.push(route[route.length - 1]);
             chunks.push(generateChunk(chunkCoords));
             break;
@@ -471,10 +465,7 @@
         });
 
         runButton.addEventListener("click", () => {
-          // Set the coordinates of the original point back to origin
           marker.setLngLat(origin);
-
-          // play audio
           audioTrack.play();
           runButton.disabled = true;
 
