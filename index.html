@@ -84,6 +84,9 @@
         zoom: 14
       });
 
+      map.dragRotate.disable();
+      map.touchZoomRotate.disableRotation();
+
       const origin = [30.4711555, 50.386974];
       const destination = [30.480598, 50.37886];
       const carImage = document.getElementById("carImage");
