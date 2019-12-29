@@ -1,4 +1,6 @@
 import "./main.css";
+import { simulate } from "guidance-sim";
+import { styleRoute } from "guidance-geojson";
 
 const origin = [30.4696164, 50.386801];
 const treePoints = [
@@ -75,6 +77,8 @@ const drawRoute = route => {
       if (passedDistance < distanceKm) {
         requestAnimationFrame(draw);
       } else {
+        currentGeojson.geometry.coordinates = route.geometry.coordinates;
+        lineRef.setData(currentGeojson);
         resolve();
       }
     };
@@ -101,8 +105,35 @@ const getRoute = destination => {
     .then(res => res.json())
     .then(async res => {
       route = res.routes[0];
+      console.log(route);
       await drawRoute(route);
       console.log("waited");
+      const config = {
+        style: "mapbox://styles/mapbox/dark-v8",
+        route: res,
+        zoom: 18,
+        pitch: 60,
+        time: "00m00s",
+        spacing: "acceldecel",
+        speed: "20x",
+        maneuvers: [
+          {
+            type: ["depart", "arrive"],
+            modifier: [],
+            buffer: 0.1,
+            zoom: 18.3,
+            pitch: 50
+          },
+          {
+            type: ["turn"],
+            modifier: ["left", "right"],
+            buffer: 0.1,
+            zoom: 18.3,
+            pitch: 50
+          }
+        ]
+      };
+      simulate(map, config);
     });
 };
 

@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/RomanBorodatov/lun#readme",
   "dependencies": {
+    "guidance-geojson": "^0.3.2",
     "guidance-sim": "^0.1.7"
   },
   "devDependencies": {
