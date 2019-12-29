@@ -1,4 +1,3 @@
-import { simulate } from "guidance-sim";
 import "./main.css";
 
 const origin = [30.4696164, 50.386801];
