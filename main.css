@@ -1,0 +1,23 @@
+body {
+  margin: 0;
+  padding: 0;
+}
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+.tree {
+  background: url("./tree.svg");
+  background-size: cover;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 100ms ease-in-out;
+}
+
+.tree:hover {
+  opacity: 1;
+}
