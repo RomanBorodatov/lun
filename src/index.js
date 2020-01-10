@@ -1,4 +1,5 @@
 import "./main.css";
+import carImage from "./car.svg";
 
 const origin = [30.4696164, 50.386801];
 const treePoints = [
@@ -18,6 +19,11 @@ const map = new mapboxgl.Map({
 });
 
 let route;
+const carElement = document.createElement("img");
+carElement.src = carImage;
+carElement.classList.add("car");
+document.querySelector("body").appendChild(carElement);
+const carMarker = new mapboxgl.Marker(carElement).setLngLat(origin).addTo(map);
 
 const drawRoute = route => {
   return new Promise(resolve => {
@@ -83,6 +89,59 @@ const drawRoute = route => {
   });
 };
 
+const animateCarAlongStep = step => {
+  return new Promise(resolve => {
+    console.log(step);
+    const animationDuration = step.duration * 10;
+    const distanceKm = step.distance / 1000;
+    const distanceIncrement = (distanceKm / animationDuration) * 16;
+
+    const currentMarkerPosition = carMarker.getLngLat();
+    let passedDistance = 0;
+    let initialyRotated = 0;
+    const targetAngle = turf.bearing(
+      turf.point([currentMarkerPosition.lng, currentMarkerPosition.lat]),
+      turf.point(step.geometry.coordinates[1])
+    );
+    const currentAngle = carMarker.getRotation();
+    const delta = ((targetAngle - currentAngle + 540) % 360) - 180;
+
+    const moveCar = () => {
+      const oldPosition = carMarker.getLngLat();
+      const newPosition = turf.along(step.geometry, passedDistance);
+      const angleToRotate = turf.bearing(
+        turf.point([oldPosition.lng, oldPosition.lat]),
+        turf.point(newPosition.geometry.coordinates)
+      );
+
+      carMarker.setLngLat(newPosition.geometry.coordinates);
+
+      passedDistance = passedDistance + distanceIncrement;
+
+      if (initialyRotated <= 10) {
+        carMarker.setRotation(currentAngle + delta * 0.1 * initialyRotated);
+        initialyRotated += 1;
+      } else {
+        carMarker.setRotation(angleToRotate);
+      }
+
+      if (passedDistance < distanceKm) {
+        requestAnimationFrame(moveCar);
+      } else {
+        resolve();
+      }
+    };
+
+    requestAnimationFrame(moveCar);
+  });
+};
+
+const animateCarAlongRoute = async route => {
+  for (let i = 0; i < route.legs[0].steps.length; i++) {
+    await animateCarAlongStep(route.legs[0].steps[i]);
+  }
+};
+
 // Get route from Navigation API and draw it
 const getRoute = destination => {
   const url =
@@ -100,9 +159,10 @@ const getRoute = destination => {
   fetch(url)
     .then(res => res.json())
     .then(async res => {
+      console.log(res);
       route = res.routes[0];
       await drawRoute(route);
-      console.log("waited");
+      animateCarAlongRoute(route);
     });
 };
 
