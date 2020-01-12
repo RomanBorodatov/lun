@@ -1,5 +1,7 @@
 import "./main.css";
 import carImage from "./car.svg";
+import { animateRouteChunk } from "./js/animateChunk";
+import { breakRouteInChunksWithAngle } from "./js/breakRoute";
 
 const origin = [30.4696164, 50.386801];
 const treePoints = [
@@ -24,6 +26,15 @@ carElement.src = carImage;
 carElement.classList.add("car");
 document.querySelector("body").appendChild(carElement);
 const carMarker = new mapboxgl.Marker(carElement).setLngLat(origin).addTo(map);
+const treesConnectionLine = turf.lineString([...treePoints]);
+const treesBoundingBox = turf.bbox(treesConnectionLine);
+
+const showAllTrees = () => {
+  document.querySelectorAll(".tree").forEach(element => {
+    element.classList.remove("hide");
+    element.classList.remove("selected");
+  });
+};
 
 const drawRoute = route => {
   return new Promise(resolve => {
@@ -35,6 +46,13 @@ const drawRoute = route => {
         coordinates: []
       }
     };
+
+    const treesConnectionLine = turf.lineString([
+      ...route.geometry.coordinates
+    ]);
+    const treesBoundingBox = turf.bbox(treesConnectionLine);
+
+    map.fitBounds(treesBoundingBox, { padding: 100, maxZoom: 14 });
 
     // Reset route line if it exists, otherwise create one
     if (map.getSource("route")) {
@@ -62,7 +80,7 @@ const drawRoute = route => {
     // animation duration is duration value form Mapbox API converted to ms and speeded 20 times
     const animationDuration = route.duration;
     const distanceKm = route.distance / 1000;
-    const distanceIncrement = (distanceKm / animationDuration) * 16;
+    const distanceIncrement = (distanceKm / animationDuration) * 10;
 
     let passedDistance = 0;
 
@@ -89,57 +107,14 @@ const drawRoute = route => {
   });
 };
 
-const animateCarAlongStep = step => {
-  return new Promise(resolve => {
-    console.log(step);
-    const animationDuration = step.duration * 10;
-    const distanceKm = step.distance / 1000;
-    const distanceIncrement = (distanceKm / animationDuration) * 16;
-
-    const currentMarkerPosition = carMarker.getLngLat();
-    let passedDistance = 0;
-    let initialyRotated = 0;
-    const targetAngle = turf.bearing(
-      turf.point([currentMarkerPosition.lng, currentMarkerPosition.lat]),
-      turf.point(step.geometry.coordinates[1])
-    );
-    const currentAngle = carMarker.getRotation();
-    const delta = ((targetAngle - currentAngle + 540) % 360) - 180;
-
-    const moveCar = () => {
-      const oldPosition = carMarker.getLngLat();
-      const newPosition = turf.along(step.geometry, passedDistance);
-      const angleToRotate = turf.bearing(
-        turf.point([oldPosition.lng, oldPosition.lat]),
-        turf.point(newPosition.geometry.coordinates)
-      );
-
-      carMarker.setLngLat(newPosition.geometry.coordinates);
-
-      passedDistance = passedDistance + distanceIncrement;
-
-      if (initialyRotated <= 10) {
-        carMarker.setRotation(currentAngle + delta * 0.1 * initialyRotated);
-        initialyRotated += 1;
-      } else {
-        carMarker.setRotation(angleToRotate);
-      }
-
-      if (passedDistance < distanceKm) {
-        requestAnimationFrame(moveCar);
-      } else {
-        resolve();
-      }
-    };
-
-    requestAnimationFrame(moveCar);
-  });
-};
-
 const animateCarAlongRoute = async route => {
-  for (let i = 0; i < route.legs[0].steps.length; i++) {
-    await animateCarAlongStep(route.legs[0].steps[i]);
+  const chunks = breakRouteInChunksWithAngle(route.geometry.coordinates);
+
+  for (let i = 0; i < chunks.length; i++) {
+    await animateRouteChunk(chunks[i], carMarker);
   }
+  map.fitBounds(treesBoundingBox, { padding: 100 });
+  showAllTrees();
 };
 
 // Get route from Navigation API and draw it
@@ -166,13 +141,27 @@ const getRoute = destination => {
     });
 };
 
+const hideInactiveTrees = activeId => {
+  const allTrees = document.querySelectorAll(".tree");
+
+  allTrees.forEach(treeElement => {
+    if (treeElement.id === activeId) {
+      treeElement.classList.add("selected");
+    } else {
+      treeElement.classList.add("hide");
+    }
+  });
+};
+
 // function to generate tree points on map with listener for click
 const generateTrees = () => {
   if (!map.isZooming()) {
     treePoints.map((point, index) => {
       const element = document.createElement("div");
       element.className = "tree";
-      element.addEventListener("click", () => {
+      element.id = index;
+      element.addEventListener("click", e => {
+        hideInactiveTrees(e.target.id);
         getRoute(point);
       });
       new mapboxgl.Marker(element).setLngLat(point).addTo(map);
@@ -208,8 +197,12 @@ map.on("load", () => {
       "circle-color": "#3887be"
     }
   });
-  const treesConnectionLine = turf.lineString([...treePoints]);
-  const treesBoundingBox = turf.bbox(treesConnectionLine);
+
+  // disable map rotation using right click + drag
+  map.dragRotate.disable();
+
+  // disable map rotation using touch rotation gesture
+  map.touchZoomRotate.disableRotation();
 
   map.fitBounds(treesBoundingBox, { padding: 100 });
   generateTrees();

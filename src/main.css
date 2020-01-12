@@ -15,7 +15,12 @@ body {
   height: 50px;
   cursor: pointer;
   opacity: 0.8;
-  transition: all 100ms ease-in-out;
+  transition: opacity 100ms ease-in-out;
+}
+
+.tree.selected {
+  width: 30px;
+  height: 30px;
 }
 
 .tree:hover {
@@ -24,4 +29,8 @@ body {
 
 .car {
   width: 50px;
+}
+
+.hide {
+  visibility: hidden;
 }
