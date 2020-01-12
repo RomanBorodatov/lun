@@ -27,7 +27,7 @@ export const animateRouteChunk = (chunk, carMarker) => {
     const distanceKm = turf.length(chunk.features[0].geometry, {
       units: "kilometers"
     });
-    const animationDuration = Math.round((distanceKm * 1000) / 0.0139 / 15);
+    const animationDuration = Math.round((distanceKm * 1000) / 0.0139 / 18);
 
     const currentMarkerPosition = carMarker.getLngLat();
     let initialyRotated = 0;

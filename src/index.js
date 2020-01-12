@@ -15,7 +15,7 @@ mapboxgl.accessToken =
   "pk.eyJ1Ijoicm9tYW5ib3JvZGF0b3YiLCJhIjoiY2sxa2w3N3Y1MDdvZjNibzNveXFidWpuaSJ9.h9858JVC3HbU02hxED68eg";
 const map = new mapboxgl.Map({
   container: "map", // container id
-  style: "mapbox://styles/mapbox/navigation-guidance-day-v4", // stylesheet location
+  style: "mapbox://styles/romanborodatov/ck5bi9lc90b0h1cr4zfljuqzo", // stylesheet location
   center: origin, // starting position [lng, lat]
   zoom: 9 // starting zoom
 });
@@ -119,11 +119,12 @@ const animateCarAlongRoute = async route => {
 
 // Get route from Navigation API and draw it
 const getRoute = destination => {
+  const start = carMarker.getLngLat();
   const url =
     "https://api.mapbox.com/directions/v5/mapbox/driving/" +
-    origin[0] +
+    start.lng +
     "," +
-    origin[1] +
+    start.lat +
     ";" +
     destination[0] +
     "," +
