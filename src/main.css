@@ -8,8 +8,7 @@ body {
   bottom: 0;
   width: 100%;
 }
-.tree {
-  background: url("./yolki.svg");
+.point {
   background-size: cover;
   width: 50px;
   height: 50px;
@@ -18,12 +17,20 @@ body {
   transition: opacity 100ms ease-in-out;
 }
 
-.tree.selected {
+.tree {
+  background-image: url("./yolki.svg");
+}
+
+.office {
+  background-image: url("./office.svg");
+}
+
+.point.selected {
   width: 30px;
   height: 30px;
 }
 
-.tree:hover {
+.point:hover {
   opacity: 1;
 }
 

@@ -1,5 +1,5 @@
 const ease = ({ distance, durationMs, onStep, resolve }) => {
-  const stepCount = durationMs / 16 > 80 ? durationMs / 16 : 80;
+  const stepCount = durationMs / 16 > 120 ? durationMs / 16 : 120;
   const valueIncrement = distance / stepCount;
   const sinValueIncrement = Math.PI / stepCount;
 

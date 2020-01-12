@@ -155,50 +155,38 @@ const hideInactiveTrees = activeId => {
 };
 
 // function to generate tree points on map with listener for click
-const generateTrees = () => {
+const generateMarkers = () => {
   if (!map.isZooming()) {
+    const office = document.createElement("div");
+    office.className = "point";
+    office.classList.add("office");
+    office.addEventListener("click", e => {
+      getRoute(origin);
+    });
+    new mapboxgl.Marker({ element: office, anchor: "left" })
+      .setLngLat(origin)
+      .addTo(map);
+
     treePoints.map((point, index) => {
       const element = document.createElement("div");
-      element.className = "tree";
+      element.className = "point";
+      element.classList.add("tree");
       element.id = index;
       element.addEventListener("click", e => {
         hideInactiveTrees(e.target.id);
         getRoute(point);
       });
-      new mapboxgl.Marker(element).setLngLat(point).addTo(map);
+      new mapboxgl.Marker({ element: element, anchor: "top" })
+        .setLngLat(point)
+        .addTo(map);
     });
   } else {
-    setTimeout(generateTrees, 50);
+    setTimeout(generateMarkers, 50);
   }
 };
 
 // Add origin point and zoom map to show all trees when map is ready
 map.on("load", () => {
-  map.addLayer({
-    id: "origin",
-    type: "circle",
-    source: {
-      type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: [
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "Point",
-              coordinates: origin
-            }
-          }
-        ]
-      }
-    },
-    paint: {
-      "circle-radius": 10,
-      "circle-color": "#3887be"
-    }
-  });
-
   // disable map rotation using right click + drag
   map.dragRotate.disable();
 
@@ -206,7 +194,7 @@ map.on("load", () => {
   map.touchZoomRotate.disableRotation();
 
   map.fitBounds(treesBoundingBox, { padding: 100 });
-  generateTrees();
+  generateMarkers();
 });
 
 // map.on("click", e => {
