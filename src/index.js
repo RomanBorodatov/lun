@@ -1,5 +1,6 @@
 import "./main.css";
-import carImage from "./car.svg";
+import carImage from "./assets/car.svg";
+import { drawRoute } from "./js/drawRoute";
 import { animateRouteChunk } from "./js/animateChunk";
 import { breakRouteInChunksWithAngle } from "./js/breakRoute";
 
@@ -21,11 +22,7 @@ const map = new mapboxgl.Map({
 });
 
 let route;
-const carElement = document.createElement("img");
-carElement.src = carImage;
-carElement.classList.add("car");
-document.querySelector("body").appendChild(carElement);
-const carMarker = new mapboxgl.Marker(carElement).setLngLat(origin).addTo(map);
+let carMarker;
 const treesConnectionLine = turf.lineString([...treePoints]);
 const treesBoundingBox = turf.bbox(treesConnectionLine);
 
@@ -33,77 +30,6 @@ const showAllTrees = () => {
   document.querySelectorAll(".tree").forEach(element => {
     element.classList.remove("hide");
     element.classList.remove("selected");
-  });
-};
-
-const drawRoute = route => {
-  return new Promise(resolve => {
-    let currentGeojson = {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        type: "LineString",
-        coordinates: []
-      }
-    };
-
-    const treesConnectionLine = turf.lineString([
-      ...route.geometry.coordinates
-    ]);
-    const treesBoundingBox = turf.bbox(treesConnectionLine);
-
-    map.fitBounds(treesBoundingBox, { padding: 100, maxZoom: 14 });
-
-    // Reset route line if it exists, otherwise create one
-    if (map.getSource("route")) {
-      map.getSource("route").setData(currentGeojson);
-    } else {
-      map.addLayer({
-        id: "route",
-        type: "line",
-        source: {
-          type: "geojson",
-          data: currentGeojson
-        },
-        layout: {
-          "line-join": "round",
-          "line-cap": "round"
-        },
-        paint: {
-          "line-color": "#3887be",
-          "line-width": 5,
-          "line-opacity": 0.5
-        }
-      });
-    }
-
-    // animation duration is duration value form Mapbox API converted to ms and speeded 20 times
-    const animationDuration = route.duration;
-    const distanceKm = route.distance / 1000;
-    const distanceIncrement = (distanceKm / animationDuration) * 10;
-
-    let passedDistance = 0;
-
-    const lineRef = map.getSource("route");
-
-    //Function gets new Point along the line, draws it and increases passedDistance
-    const draw = () => {
-      const newPosition = turf.along(route.geometry, passedDistance);
-      currentGeojson.geometry.coordinates.push(
-        newPosition.geometry.coordinates
-      );
-      lineRef.setData(currentGeojson);
-
-      passedDistance = passedDistance + distanceIncrement;
-
-      if (passedDistance < distanceKm) {
-        requestAnimationFrame(draw);
-      } else {
-        resolve();
-      }
-    };
-
-    requestAnimationFrame(draw);
   });
 };
 
@@ -136,7 +62,7 @@ const getRoute = destination => {
     .then(res => res.json())
     .then(async res => {
       route = res.routes[0];
-      await drawRoute(route);
+      await drawRoute(route, map);
       animateCarAlongRoute(route);
     });
 };
@@ -157,8 +83,7 @@ const hideInactiveTrees = activeId => {
 const generateMarkers = () => {
   if (!map.isZooming()) {
     const office = document.createElement("div");
-    office.className = "point";
-    office.classList.add("office");
+    office.classList.add("point", "office");
     office.addEventListener("click", e => {
       getRoute(origin);
     });
@@ -168,8 +93,7 @@ const generateMarkers = () => {
 
     treePoints.map((point, index) => {
       const element = document.createElement("div");
-      element.className = "point";
-      element.classList.add("tree");
+      element.classList.add("point", "tree");
       element.id = index;
       element.addEventListener("click", e => {
         hideInactiveTrees(e.target.id);
@@ -184,6 +108,14 @@ const generateMarkers = () => {
   }
 };
 
+const initCar = () => {
+  const carElement = document.createElement("img");
+  carElement.src = carImage;
+  carElement.classList.add("car");
+  document.querySelector("body").appendChild(carElement);
+  carMarker = new mapboxgl.Marker(carElement).setLngLat(origin).addTo(map);
+};
+
 // Add origin point and zoom map to show all trees when map is ready
 map.on("load", () => {
   // disable map rotation using right click + drag
@@ -194,4 +126,5 @@ map.on("load", () => {
 
   map.fitBounds(treesBoundingBox, { padding: 100 });
   generateMarkers();
+  initCar();
 });

@@ -18,11 +18,11 @@ body {
 }
 
 .tree {
-  background-image: url("./yolki.svg");
+  background-image: url("./assets/yolki.svg");
 }
 
 .office {
-  background-image: url("./office.svg");
+  background-image: url("./assets/office.svg");
 }
 
 .point.selected {
