@@ -135,7 +135,6 @@ const getRoute = destination => {
   fetch(url)
     .then(res => res.json())
     .then(async res => {
-      console.log(res);
       route = res.routes[0];
       await drawRoute(route);
       animateCarAlongRoute(route);
@@ -196,7 +195,3 @@ map.on("load", () => {
   map.fitBounds(treesBoundingBox, { padding: 100 });
   generateMarkers();
 });
-
-// map.on("click", e => {
-//   console.log(e.lngLat);
-// });

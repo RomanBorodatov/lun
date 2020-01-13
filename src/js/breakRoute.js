@@ -45,6 +45,5 @@ export const breakRouteInChunksWithAngle = route => {
     }
     chunks.push(generateChunk(chunkCoords));
   }
-  console.log(chunks);
   return chunks;
 };
